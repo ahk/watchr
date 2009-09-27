@@ -18,51 +18,36 @@ module Watchr
         attr_accessor :last_atime, :last_ctime, :last_mtime
         
         def initialize path
-          @last_atime = atime_for path
-          @last_mtime = mtime_for path
-          @last_ctime = ctime_for path
+          @last_atime = stat_time_for :atime
+          @last_mtime = stat_time_for :mtime
+          @last_ctime = stat_time_for :ctime
           super
         end
         
         # Callback. Called on file change event
         # Delegates to Controller#update, passing in path and event type
+        # ignore anything but modified file content
         def on_change
-          if mtime_changed?
+          if stat_changed? :mtime
             update_stat_times!
-            self.class.handler.notify(path, :changed)
+            self.class.handler.notify(@path, :changed)
           end
         end
         
       private
         def update_stat_times!
           %w(atime mtime ctime).each do |stat|
-            time = self.send("#{stat}_for", path)
-            self.send("last_#{stat}=", time)
+            time = self.send( :stat_time_for, stat )
+            self.send "last_#{stat}=", time
           end
         end
         
-        def atime_changed?
-          @last_atime < atime_for(path)
+        def stat_changed? stat
+          self.send("last_#{stat}") < stat_time_for(stat)
         end
         
-        def mtime_changed?
-          @last_mtime < mtime_for(path)
-        end
-        
-        def ctime_changed?
-          @last_ctime < ctime_for(path)
-        end
-        
-        def atime_for path
-          File.atime path
-        end
-        
-        def mtime_for path
-          File.mtime path
-        end
-        
-        def ctime_for path
-          File.ctime path
+        def stat_time_for stat
+          File.send stat.to_sym, @path
         end
       end # SingleFileWatcher
 
