@@ -1,4 +1,8 @@
 require 'pathname'
+begin
+  gem 'test-unit' # it's a gem in 1.9
+rescue LoadError, RuntimeError, NoMethodError
+end
 require 'test/unit'
 require 'matchy'
 require 'mocha'

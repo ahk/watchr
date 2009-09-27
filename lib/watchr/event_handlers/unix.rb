@@ -1,4 +1,5 @@
 require 'rev'
+require 'ruby-debug'
 
 module Watchr
   module EventHandler
@@ -13,13 +14,57 @@ module Watchr
           # method with file event info
           attr_accessor :handler
         end
-
+        
+        attr_accessor :last_atime, :last_ctime, :last_mtime
+        
+        def initialize path
+          @last_atime = atime_for path
+          @last_mtime = mtime_for path
+          @last_ctime = ctime_for path
+          super
+        end
+        
         # Callback. Called on file change event
         # Delegates to Controller#update, passing in path and event type
         def on_change
-          self.class.handler.notify(path, :changed)
+          if mtime_changed?
+            update_stat_times!
+            self.class.handler.notify(path, :changed)
+          end
         end
-      end
+        
+      private
+        def update_stat_times!
+          %w(atime mtime ctime).each do |stat|
+            time = self.send("#{stat}_for", path)
+            self.send("last_#{stat}=", time)
+          end
+        end
+        
+        def atime_changed?
+          @last_atime < atime_for(path)
+        end
+        
+        def mtime_changed?
+          @last_mtime < mtime_for(path)
+        end
+        
+        def ctime_changed?
+          @last_ctime < ctime_for(path)
+        end
+        
+        def atime_for path
+          File.atime path
+        end
+        
+        def mtime_for path
+          File.mtime path
+        end
+        
+        def ctime_for path
+          File.ctime path
+        end
+      end # SingleFileWatcher
 
       def initialize
         SingleFileWatcher.handler = self

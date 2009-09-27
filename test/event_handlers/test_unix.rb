@@ -9,6 +9,12 @@ class UnixEventHandlerTest < Test::Unit::TestCase
     @loop    = Rev::Loop.default
     @handler = EventHandler::Unix.new
     @loop.stubs(:run)
+    
+    @now = Time.now
+    stub_stat_time @now                       # fakes initial stat
+    @watcher = SingleFileWatcher.new('foo/bar')
+    @watcher.stubs(:path).returns('foo/bar')
+    stub_stat_time @now + 10                  # fakes a file change
   end
 
   def teardown
@@ -29,13 +35,23 @@ class UnixEventHandlerTest < Test::Unit::TestCase
     @loop.watchers.every.path.should include('foo', 'bar')
     @loop.watchers.every.class.uniq.should be([SingleFileWatcher])
   end
-
+  
   test "notifies observers on file event" do
-    watcher = SingleFileWatcher.new('foo/bar')
-    watcher.stubs(:path).returns('foo/bar')
-
     @handler.expects(:notify).with('foo/bar', :changed)
-    watcher.on_change
+    @watcher.on_change
+  end
+  
+  test "compares and updates useful stat info" do
+    # stat change
+    @watcher.last_mtime.should be(@now)
+    @watcher.on_change
+    @watcher.last_mtime.should be(@now + 10)
+    
+    # no stat change
+    stub_stat_time @now
+    @watcher.last_mtime = @now
+    @watcher.on_change
+    @watcher.last_mtime.should be(@now)
   end
 
   ## on the fly updates of monitored files list
@@ -52,5 +68,12 @@ class UnixEventHandlerTest < Test::Unit::TestCase
     @loop.watchers.every.path.should include('bax')
     @loop.watchers.every.path.should exclude('foo')
     @loop.watchers.every.path.should exclude('bar')
+  end
+  
+  private
+  def stub_stat_time now
+    File.stubs(:atime).returns(now)
+    File.stubs(:mtime).returns(now)
+    File.stubs(:ctime).returns(now)
   end
 end
