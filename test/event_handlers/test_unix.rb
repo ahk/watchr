@@ -71,9 +71,10 @@ class UnixEventHandlerTest < Test::Unit::TestCase
   end
   
   private
+  # File.atime "foo/bar/baz" => Time
   def stub_stat_time now
-    File.stubs(:atime).returns(now)
-    File.stubs(:mtime).returns(now)
-    File.stubs(:ctime).returns(now)
+    %w(atime ctime mtime).each do |s|
+      File.stubs(s).with {|p| p.is_a? String}.returns(now)
+    end
   end
 end

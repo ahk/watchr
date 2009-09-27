@@ -1,5 +1,4 @@
 require 'rev'
-require 'ruby-debug'
 
 module Watchr
   module EventHandler
@@ -18,10 +17,10 @@ module Watchr
         attr_accessor :last_atime, :last_ctime, :last_mtime
         
         def initialize path
+          super
           @last_atime = stat_time_for :atime
           @last_mtime = stat_time_for :mtime
           @last_ctime = stat_time_for :ctime
-          super
         end
         
         # Callback. Called on file change event
