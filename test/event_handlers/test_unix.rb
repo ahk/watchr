@@ -36,15 +36,15 @@ class UnixEventHandlerTest < Test::Unit::TestCase
   end
   
   test "notifies observers on changed, modified or accessed file event" do
-    @handler.expects(:notify).with('foo/bar', :accessed)
+    @handler.expects(:notify).with('foo/bar', [:accessed])
     stub_stat_time( @now + 10, :atime )
     @watcher.on_change
     
-    @handler.expects(:notify).with('foo/bar', :modified)
+    @handler.expects(:notify).with('foo/bar', [:modified])
     stub_stat_time( @now + 10, :mtime )
     @watcher.on_change
     
-    @handler.expects(:notify).with('foo/bar', :changed)
+    @handler.expects(:notify).with('foo/bar', [:changed])
     stub_stat_time( @now + 10, :ctime )
     @watcher.on_change
   end

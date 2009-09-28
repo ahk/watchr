@@ -1,5 +1,4 @@
 require 'rev'
-require 'ruby-debug'
 
 module Watchr
   module EventHandler
@@ -28,9 +27,10 @@ module Watchr
         # Delegates to Controller#update, passing in path and event type
         # ignore anything but modified file content
         def on_change
-          event = current_event_type
-          update_stat_times!
-          self.class.handler.notify( path, event )
+          if events = changed_stats
+            update_stat_times!
+            self.class.handler.notify( path, events )
+          end
         end
         
       private
@@ -41,12 +41,12 @@ module Watchr
           end
         end
         
-        def current_event_type
+        def changed_stats
           # fix this for priority, it's unordered as hash
-          event = {:changed => :ctime, :modified => :mtime, :accessed => :atime}.detect do |flag,stat|
+          events = {:changed => :ctime, :modified => :mtime, :accessed => :atime}.select do |flag,stat|
             stat_changed? stat
           end
-          event[0] if event
+          events.map {|e| e[0]} # flag names/keys
         end
         
         def stat_changed? stat

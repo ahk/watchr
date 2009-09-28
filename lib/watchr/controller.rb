@@ -49,15 +49,13 @@ module Watchr
     # event<Symbol>:: event type (ignored for now)
     #
     def update(path, event = nil)
-      if event == :modified || :changed
-        path = Pathname(path).expand_path
+      path = Pathname(path).expand_path
 
-        if path == @script.path
-          @script.parse!
-          @handler.refresh(monitored_paths)
-        else
-          @script.action_for(path).call
-        end
+      if path == @script.path
+        @script.parse!
+        @handler.refresh(monitored_paths)
+      else
+        @script.action_for(path).call
       end
     end
 
