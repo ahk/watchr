@@ -11,10 +11,9 @@ class UnixEventHandlerTest < Test::Unit::TestCase
     @loop.stubs(:run)
     
     @now = Time.now
-    stub_stat_time @now                       # fakes initial stat
+    stub_stat_times @now # fakes initial stat
     @watcher = SingleFileWatcher.new('foo/bar')
     @watcher.stubs(:path).returns('foo/bar')
-    stub_stat_time @now + 10                  # fakes a file change
   end
 
   def teardown
@@ -36,20 +35,30 @@ class UnixEventHandlerTest < Test::Unit::TestCase
     @loop.watchers.every.class.uniq.should be([SingleFileWatcher])
   end
   
-  test "notifies observers on file event" do
+  test "notifies observers on changed, modified or accessed file event" do
+    @handler.expects(:notify).with('foo/bar', :accessed)
+    stub_stat_time( @now + 10, :atime )
+    @watcher.on_change
+    
+    @handler.expects(:notify).with('foo/bar', :modified)
+    stub_stat_time( @now + 10, :mtime )
+    @watcher.on_change
+    
     @handler.expects(:notify).with('foo/bar', :changed)
+    stub_stat_time( @now + 10, :ctime )
     @watcher.on_change
   end
   
   test "compares and updates useful stat info" do
     # stat change
+    stub_stat_time( @now + 10, :mtime )
     @watcher.last_mtime.should be(@now)
     @watcher.on_change
     @watcher.last_mtime.should be(@now + 10)
     
     # no stat change
-    stub_stat_time @now
     @watcher.last_mtime = @now
+    stub_stat_time @now, :mtime
     @watcher.on_change
     @watcher.last_mtime.should be(@now)
   end
@@ -72,9 +81,13 @@ class UnixEventHandlerTest < Test::Unit::TestCase
   
   private
   # File.atime "foo/bar/baz" => Time
-  def stub_stat_time now
+  def stub_stat_times now
     %w(atime ctime mtime).each do |s|
       File.stubs(s).with {|p| p.is_a? String}.returns(now)
     end
+  end
+  
+  def stub_stat_time now, stat
+    File.stubs(stat).with {|p| p.is_a? String}.returns(now)
   end
 end
