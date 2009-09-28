@@ -25,9 +25,8 @@ module Watchr
         
         # Callback. Called on file change event
         # Delegates to Controller#update, passing in path and event type
-        # ignore anything but modified file content
         def on_change
-          if events = changed_stats
+          if events = changed_flags
             update_stat_times!
             self.class.handler.notify( path, events )
           end
@@ -41,7 +40,7 @@ module Watchr
           end
         end
         
-        def changed_stats
+        def changed_flags
           # fix this for priority, it's unordered as hash
           events = {:changed => :ctime, :modified => :mtime, :accessed => :atime}.select do |flag,stat|
             stat_changed? stat

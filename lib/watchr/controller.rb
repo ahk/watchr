@@ -48,14 +48,16 @@ module Watchr
     # path<Pathname, String>:: path that triggered event
     # event<Symbol>:: event type (ignored for now)
     #
-    def update(path, event = nil)
-      path = Pathname(path).expand_path
+    def update(path, events = [])
+      if events.empty? || events.include?(:modified)
+        path = Pathname(path).expand_path
 
-      if path == @script.path
-        @script.parse!
-        @handler.refresh(monitored_paths)
-      else
-        @script.action_for(path).call
+        if path == @script.path
+          @script.parse!
+          @handler.refresh(monitored_paths)
+        else
+          @script.action_for(path).call
+        end
       end
     end
 
