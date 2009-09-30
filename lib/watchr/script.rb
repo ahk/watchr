@@ -169,6 +169,8 @@ module Watchr
     end
     
     def events_for(path)
+      Watchr.debug(self.instance_variable_get("@default_events").inspect)
+      Watchr.debug("grabbing events for #{path}")
       path = rel_path(path).to_s
       rule = rule_for(path)
       rule.events
