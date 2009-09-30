@@ -171,7 +171,6 @@ module Watchr
     def events_for(path)
       path = rel_path(path).to_s
       rule = rule_for(path)
-      raise "Couldnt find rule for path: #{path}" unless rule
       rule.events
     end
 

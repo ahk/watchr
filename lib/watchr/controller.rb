@@ -49,8 +49,7 @@ module Watchr
     # event<Symbol>:: event type (ignored for now)
     #
     def update(path, events = [])
-      # Watchr.debug "path: #{path}, exp_events #{@script.events_for(path)},got_events: #{events}, satisfied?: #{event_conditions_satisfied?( path, events )}"
-      if path == @script.path
+      if is_current_script?(path)
         @script.parse!
         @handler.refresh(monitored_paths)
       else
@@ -75,6 +74,11 @@ module Watchr
     end
     
   private
+    def is_current_script? path
+      expanded = Pathname(path.respond_to?(:to_path) ? path.to_path : path.to_s).expand_path
+      expanded == @script.path
+    end
+    
     # satisfied if:
     #   - one of the thrown events matches one of the rule events
     #   - thereare no rule events (none set in script, no default)

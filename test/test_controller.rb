@@ -105,8 +105,9 @@ class TestController < Test::Unit::TestCase
     path = to_p('abc')
     @script.stubs(:path).returns(path)
     @script.expects(:parse!)
-
-    @controller.update(path)
+    
+    @controller.send(:is_current_script?, 'abc').should be(true)
+    @controller.update('abc')
   end
 
   test "refreshes handler on script file update" do
