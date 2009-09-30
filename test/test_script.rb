@@ -21,7 +21,7 @@ class TestScript < Test::Unit::TestCase
   end
 
   test "default events" do
-    @script.default_events = [:modified]
+    @script.default_events [:modified]
   end
 
   ## functionality
@@ -57,7 +57,7 @@ class TestScript < Test::Unit::TestCase
 
   test "resets state" do
     @script.default_action { 'x' }
-    @script.default_events = [:modified]
+    @script.default_events [:modified]
     @script.watch('foo') { 'bar' }
     @script.reset
     @script.instance_variable_get(:@default_action).should be_kind_of(Proc)
@@ -89,7 +89,7 @@ class TestScript < Test::Unit::TestCase
   test "rule's default events" do
     @script.watch('abc')
     @script.events_for('abc').should be(nil)
-    @script.default_events = [:modified]
+    @script.default_events [:modified]
     
     @script.watch('abc')
     @script.events_for('abc').should be([:modified])

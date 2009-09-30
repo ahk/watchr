@@ -49,6 +49,7 @@ module Watchr
     # event<Symbol>:: event type (ignored for now)
     #
     def update(path, events = [])
+      # Watchr.debug "path: #{path}, exp_events #{@script.events_for(path)},got_events: #{events}, satisfied?: #{event_conditions_satisfied?( path, events )}"
       if path == @script.path
         @script.parse!
         @handler.refresh(monitored_paths)

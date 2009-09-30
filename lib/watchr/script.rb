@@ -127,7 +127,7 @@ module Watchr
     #   watch( 'TODO.txt',    [:modified, :changed] ) 
     #   watch( 'LICENSE',     [:modified, :changed] )
     #
-    def default_events=(events)
+    def default_events(events)
       @default_events = events
     end
 
@@ -169,10 +169,9 @@ module Watchr
     end
     
     def events_for(path)
-      Watchr.debug(self.instance_variable_get("@default_events").inspect)
-      Watchr.debug("grabbing events for #{path}")
       path = rel_path(path).to_s
       rule = rule_for(path)
+      raise "Couldnt find rule for path: #{path}" unless rule
       rule.events
     end
 
