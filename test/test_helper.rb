@@ -4,6 +4,7 @@ begin
 rescue LoadError, RuntimeError, NoMethodError
 end
 require 'test/unit'
+require 'tempfile'
 require 'matchy'
 require 'mocha'
 require 'every'

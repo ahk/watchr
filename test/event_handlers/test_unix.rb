@@ -1,3 +1,5 @@
+if Watchr::HAVE_REV
+
 require 'test/test_helper'
 
 class UnixEventHandlerTest < Test::Unit::TestCase
@@ -91,3 +93,5 @@ class UnixEventHandlerTest < Test::Unit::TestCase
     File.stubs(stat).with {|p| p.is_a? String}.returns(now)
   end
 end
+
+end  # if Watchr::HAVE_REV

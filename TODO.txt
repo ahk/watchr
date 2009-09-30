@@ -1,13 +1,5 @@
 
-* search path for scripts
-  * allows gems/plugins to bundle own scripts
-  * use case: foca-protest gem includes /lib/protest.watchr
-    -> $ watchr protest.watchr # will pick it up
-
 * 1.9 compatibility
-
-* refactor Script#parse!
-  * only accept paths in initialize?
 
 * sometimes an action is fired without a file being saved
   * buffer flushing issue?
@@ -40,4 +32,7 @@
   * use case: a script updates a manifest file when a file is deleted
 
 * memory profiling / benchmarks
+
+* version.watchr
+  * sync versions (gemspec & Watchr::VERSION)
 
