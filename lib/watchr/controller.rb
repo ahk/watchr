@@ -74,16 +74,13 @@ module Watchr
     end
     
   private
-    # FIXME: CLEAN THIS UP
     # satisfied if:
     #   - one of the thrown events matches one of the rule events
-    #   - there are no rule events (none set in script, no default)
+    #   - thereare no rule events (none set in script, no default)
+    #
     def event_conditions_satisfied?(path, got_events)
-      exp_events = @script.events_for(path)
-      if exp_events
-        exp_events.map do |event|
-          got_events.include? event
-        end.include? true
+      if exp_events = @script.events_for(path)
+        got_events.any? {|e| exp_events.include? e}
       else
         true
       end
