@@ -81,7 +81,7 @@ module Watchr
     
     # satisfied if:
     #   - one of the thrown events matches one of the rule events
-    #   - thereare no rule events (none set in script, no default)
+    #   - there are no rule events (none set in script, no default)
     #
     def event_conditions_satisfied?(path, got_events)
       if exp_events = @script.events_for(path)
