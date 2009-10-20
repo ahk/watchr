@@ -1,6 +1,10 @@
+require 'test/test_helper'
+
 if Watchr::HAVE_REV
 
-require 'test/test_helper'
+class Watchr::EventHandler::Unix::SingleFileWatcher
+  public :type
+end
 
 class UnixEventHandlerTest < Test::Unit::TestCase
   include Watchr
@@ -8,8 +12,17 @@ class UnixEventHandlerTest < Test::Unit::TestCase
   SingleFileWatcher = EventHandler::Unix::SingleFileWatcher
 
   def setup
+    @now = Time.now
+    pathname = Pathname.new('foo/bar')
+    pathname.stubs(:atime ).returns(@now)
+    pathname.stubs(:mtime ).returns(@now)
+    pathname.stubs(:ctime ).returns(@now)
+    pathname.stubs(:exist?).returns(true)
+    SingleFileWatcher.any_instance.stubs(:pathname).returns(pathname)
+
     @loop    = Rev::Loop.default
     @handler = EventHandler::Unix.new
+    @watcher = SingleFileWatcher.new('foo/bar')
     @loop.stubs(:run)
     
     @now = Time.now
@@ -28,6 +41,60 @@ class UnixEventHandlerTest < Test::Unit::TestCase
     @handler.listen([])
   end
 
+  ## SingleFileWatcher
+
+  test "watcher pathname" do
+    @watcher.pathname.should be_kind_of(Pathname)
+    @watcher.pathname.to_s.should be(@watcher.path)
+  end
+
+  test "stores reference times" do
+    @watcher.pathname.stubs(:atime).returns(:time)
+    @watcher.pathname.stubs(:mtime).returns(:time)
+    @watcher.pathname.stubs(:ctime).returns(:time)
+
+    @watcher.send(:update_reference_times)
+    @watcher.instance_variable_get(:@reference_atime).should be(:time)
+    @watcher.instance_variable_get(:@reference_mtime).should be(:time)
+    @watcher.instance_variable_get(:@reference_ctime).should be(:time)
+  end
+
+  test "stores initial reference times" do
+    SingleFileWatcher.any_instance.expects(:update_reference_times)
+    SingleFileWatcher.new('foo')
+  end
+
+  test "updates reference times on change" do
+    @watcher.expects(:update_reference_times)
+    @watcher.on_change
+  end
+
+  test "detects event type" do
+    trigger_event @watcher, @now, :atime
+    @watcher.type.should be(:accessed)
+
+    trigger_event @watcher, @now, :mtime
+    @watcher.type.should be(:modified)
+
+    trigger_event @watcher, @now, :ctime
+    @watcher.type.should be(:changed)
+
+    trigger_event @watcher, @now, :atime, :mtime
+    @watcher.type.should be(:modified)
+
+    trigger_event @watcher, @now, :mtime, :ctime
+    @watcher.type.should be(:modified)
+
+    trigger_event @watcher, @now, :atime, :ctime
+    @watcher.type.should be(:accessed)
+
+    trigger_event @watcher, @now, :atime, :mtime, :ctime
+    @watcher.type.should be(:modified)
+
+    @watcher.pathname.stubs(:exist?).returns(false)
+    @watcher.type.should be(:deleted)
+  end
+
   ## monitoring file events
 
   test "listens for events on monitored files" do
@@ -37,32 +104,32 @@ class UnixEventHandlerTest < Test::Unit::TestCase
     @loop.watchers.every.class.uniq.should be([SingleFileWatcher])
   end
   
-  test "notifies observers on changed, modified or accessed file event" do
-    @handler.expects(:notify).with('foo/bar', [:accessed])
-    stub_stat_time( @now + 10, :atime )
-    @watcher.on_change
-    
-    @handler.expects(:notify).with('foo/bar', [:modified])
-    stub_stat_time( @now + 10, :mtime )
-    @watcher.on_change
-    
-    @handler.expects(:notify).with('foo/bar', [:changed])
-    stub_stat_time( @now + 10, :ctime )
+  test "notifies observers on file event" do
+    @watcher.stubs(:path).returns('foo')
+    @handler.expects(:notify).with('foo', anything)
     @watcher.on_change
   end
-  
-  test "compares and updates useful stat info" do
-    # stat change
-    stub_stat_time( @now + 10, :mtime )
-    @watcher.last_mtime.should be(@now)
+
+  test "notifies observers of event type" do
+    trigger_event @watcher, @now, :atime
+    @handler.expects(:notify).with('foo/bar', :accessed)
     @watcher.on_change
-    @watcher.last_mtime.should be(@now + 10)
-    
-    # no stat change
-    @watcher.last_mtime = @now
-    stub_stat_time @now, :mtime
+
+    trigger_event @watcher, @now, :mtime
+    @handler.expects(:notify).with('foo/bar', :modified)
     @watcher.on_change
-    @watcher.last_mtime.should be(@now)
+
+    trigger_event @watcher, @now, :ctime
+    @handler.expects(:notify).with('foo/bar', :changed)
+    @watcher.on_change
+
+    trigger_event @watcher, @now, :atime, :mtime, :ctime
+    @handler.expects(:notify).with('foo/bar', :modified)
+    @watcher.on_change
+
+    @watcher.pathname.stubs(:exist?).returns(false)
+    @handler.expects(:notify).with('foo/bar', :deleted)
+    @watcher.on_change
   end
 
   ## on the fly updates of monitored files list
@@ -82,15 +149,17 @@ class UnixEventHandlerTest < Test::Unit::TestCase
   end
   
   private
-  # File.atime "foo/bar/baz" => Time
-  def stub_stat_times now
-    %w(atime ctime mtime).each do |s|
-      File.stubs(s).with {|p| p.is_a? String}.returns(now)
+  def trigger_event(watcher, now, *types)
+    watcher.pathname.stubs(:atime).returns(now)
+    watcher.pathname.stubs(:mtime).returns(now)
+    watcher.pathname.stubs(:ctime).returns(now)
+    watcher.instance_variable_set(:@reference_atime, now)
+    watcher.instance_variable_set(:@reference_mtime, now)
+    watcher.instance_variable_set(:@reference_ctime, now)
+
+    types.each do |type|
+      watcher.pathname.stubs(type).returns(now+10)
     end
-  end
-  
-  def stub_stat_time now, stat
-    File.stubs(stat).with {|p| p.is_a? String}.returns(now)
   end
 end
 

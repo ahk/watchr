@@ -8,6 +8,7 @@ module Watchr
   #   script = Watchr::Script.new(path)
   #
   class Script
+    DEFAULT_EVENT_TYPE = :modified
 
     # Convenience type. Provides clearer and simpler access to rule properties.
     #
@@ -17,7 +18,7 @@ module Watchr
     #   rule.pattern      #=> 'lib/.*\.rb'
     #   rule.action.call  #=> 'ohaie'
     #
-    Rule = Struct.new(:pattern, :events, :action)
+    Rule = Struct.new(:pattern, :event_type, :action)
 
     # TODO eval context
     class API #:nodoc:
@@ -70,13 +71,19 @@ module Watchr
     #
     # ===== Parameters
     # pattern<~#match>:: pattern to match targetted paths
+    # event_type<Symbol>::
+    #   Rule will only match events of this type. Accepted types are :accessed,
+    #   :modified, :changed, :delete and nil (any), where the first three
+    #   correspond to atime, mtime and ctime respectively. Defaults to
+    #   :modified.
     # action<Block>:: action to trigger
     #
     # ===== Returns
     # rule<Rule>:: rule created by the method
     #
-    def watch(pattern, events = nil, &action)
-      @rules << Rule.new(pattern, events || @default_events, action || @default_action)
+
+    def watch(pattern, event_type = DEFAULT_EVENT_TYPE, &action)
+      @rules << Rule.new(pattern, event_type, action || @default_action)
       @rules.last
     end
 
@@ -147,6 +154,7 @@ module Watchr
       instance_eval(@path.read)
     end
 
+<<<<<<< HEAD
     def reset
       @default_action = lambda {}
       @default_events = nil
@@ -155,17 +163,30 @@ module Watchr
 
     # Find an action corresponding to a path. The returned action is actually a
     # wrapper around the rule's action, with the match_data prepopulated.
+=======
+    # Find an action corresponding to a path and event type. The returned
+    # action is actually a wrapper around the rule's action, with the
+    # match_data prepopulated.
+    #
+    # ===== Params
+    # path<Pathnane,String>:: Find action that correspond to this path.
+    # event_type<Symbol>:: Find action only if rule's event if of this type.
+>>>>>>> bae9efbca62c6587836e5e0f9bef6cfc13bb3de8
     #
     # ===== Examples
     #
     #   script.watch( 'test/test_.*\.rb' ) {|md| "ruby #{md[0]}" }
     #   script.action_for('test/test_watchr.rb').call #=> "ruby test/test_watchr.rb"
     #
-    def action_for(path)
+    def action_for(path, event_type = DEFAULT_EVENT_TYPE)
       path = rel_path(path).to_s
-      rule = rule_for(path)
-      data = path.match(rule.pattern)
-      lambda { rule.action.call(data) }
+      rule = rules_for(path).detect {|rule| rule.event_type.nil? || rule.event_type == event_type }
+      if rule
+        data = path.match(rule.pattern)
+        lambda { rule.action.call(data) }
+      else
+        lambda {}
+      end
     end
     
     def events_for(path)
@@ -195,17 +216,17 @@ module Watchr
 
     private
 
-    # Rule corresponding to a given path. If more than one rule matches, then
-    # the last defined rule takes precedence.
+    # Rules corresponding to a given path, in reversed order of precedence
+    # (latest one is most inportant).
     #
     # ===== Parameters
     # path<Pathname, String>:: path to look up rule for
     #
     # ===== Returns
-    # rule<Rule>:: rule corresponding to <tt>path</tt>
+    # rules<Array(Rule)>:: rules corresponding to <tt>path</tt>
     #
-    def rule_for(path)
-      @rules.reverse.detect {|rule| path.match(rule.pattern) }
+    def rules_for(path)
+      @rules.reverse.select {|rule| path.match(rule.pattern) }
     end
 
     # Make a path relative to current working directory.
@@ -218,6 +239,12 @@ module Watchr
     #
     def rel_path(path)
       Pathname(path).expand_path.relative_path_from(Pathname(Dir.pwd))
+    end
+
+    # Reset script state
+    def reset
+      @default_action = lambda {}
+      @rules.clear
     end
   end
 end

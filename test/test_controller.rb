@@ -85,20 +85,8 @@ class TestController < Test::Unit::TestCase
 
   test "always call action for path if no events are set for the rule" do
     path = to_p('abc')
-    @script.expects(:events_for).with(path).returns(nil)
-    @script.expects(:action_for).with(path).returns(lambda {})
-    @controller.update(path) # no thrown events
-    
-    @script.expects(:events_for).with(path).returns(nil)
-    @script.expects(:action_for).with(path).returns(lambda {})
-    @controller.update(path, [:modified]) # thrown events
-  end
-  
-  test "calls action only if the rule's events include one of the thrown events" do
-    path = to_p('abc')
-    @script.expects(:events_for).with(path).returns([:modified,:changed])
-    @script.expects(:action_for).with(path).returns(lambda {})
-    @controller.update(path, [:modified])
+    @script.expects(:action_for).with(path, :modified).returns(lambda {})
+    @controller.update('abc', :modified)
   end
 
   test "parses script on script file update" do
@@ -117,6 +105,11 @@ class TestController < Test::Unit::TestCase
 
     @handler.expects(:refresh).with %w( foo bar )
     @controller.update(path)
+  end
+
+  test "exits gracefully when Interrupted" do
+    @handler.stubs(:listen).raises(Interrupt)
+    @controller.run
   end
 end
 

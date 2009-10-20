@@ -11,23 +11,48 @@ module Watchr
           # method with file event info
           attr_accessor :handler
         end
-        
-        attr_accessor :last_atime, :last_ctime, :last_mtime
-        
-        def initialize path
+
+        def initialize(path)
           super
-          @last_atime = stat_time_for :atime
-          @last_mtime = stat_time_for :mtime
-          @last_ctime = stat_time_for :ctime
+          update_reference_times
         end
-        
+
+        # File's path as a Pathname
+        def pathname
+          @pathname ||= Pathname(@path)
+        end
+
         # Callback. Called on file change event
         # Delegates to Controller#update, passing in path and event type
         def on_change
-          if events = changed_flags
-            update_stat_times!
-            self.class.handler.notify( path, events )
-          end
+          self.class.handler.notify(path, type)
+          update_reference_times unless type == :deleted
+        end
+
+        private
+
+        def update_reference_times
+          @reference_atime = pathname.atime
+          @reference_mtime = pathname.mtime
+          @reference_ctime = pathname.ctime
+        end
+
+        # Type of latest event.
+        #
+        # A single type is determined, even though more than one stat times may
+        # have changed on the file. The type is the first to match in the
+        # following hierarchy:
+        #
+        #   :deleted, :modified (mtime), :accessed (atime), :changed (ctime)
+        #
+        # ===== Returns
+        # type<Symbol>:: latest event's type
+        #
+        def type
+          return :deleted   if !pathname.exist?
+          return :modified  if  pathname.mtime > @reference_mtime
+          return :accessed  if  pathname.atime > @reference_atime
+          return :changed   if  pathname.ctime > @reference_ctime
         end
         
       private

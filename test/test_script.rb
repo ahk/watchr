@@ -12,7 +12,7 @@ class TestScript < Test::Unit::TestCase
 
   test "watch" do
     @script.watch('pattern')
-    @script.watch('pattern', [:modified])
+    @script.watch('pattern', :event_type)
     @script.watch('pattern') { nil }
   end
 
@@ -27,16 +27,38 @@ class TestScript < Test::Unit::TestCase
   ## functionality
 
   test "rule object" do
-    rule = @script.watch('pattern') { nil }
+    rule = @script.watch('pattern', :modified) { nil }
     rule.pattern.should be('pattern')
-    rule.events.should be(nil)
+    rule.event_type.should be(:modified)
     rule.action.call.should be(nil)
+  end
+
+  test "default event type" do
+    rule = @script.watch('pattern') { nil }
+    rule.event_type.should be(:modified)
   end
 
   test "finds action for path" do
     @script.watch('abc') { :x }
     @script.watch('def') { :y }
     @script.action_for('abc').call.should be(:x)
+  end
+
+  test "finds action for path with event type" do
+    @script.watch('abc', :accessed) { :x }
+    @script.watch('abc', :modified) { :y }
+    @script.action_for('abc', :accessed).call.should be(:x)
+  end
+
+  test "finds action for path with any event type" do
+    @script.watch('abc', nil) { :x }
+    @script.watch('abc', :modified) { :y }
+    @script.action_for('abc', :accessed).call.should be(:x)
+  end
+
+  test "no action for path" do
+    @script.watch('abc', :accessed) { :x }
+    @script.action_for('abc', :modified).call.should be(nil)
   end
 
   test "collects patterns" do
@@ -59,8 +81,7 @@ class TestScript < Test::Unit::TestCase
     @script.default_action { 'x' }
     @script.default_events [:modified]
     @script.watch('foo') { 'bar' }
-    @script.reset
-    @script.instance_variable_get(:@default_action).should be_kind_of(Proc)
+    @script.send(:reset)
     @script.instance_variable_get(:@default_action).call.should be(nil)
     @script.instance_variable_get(:@default_events).should be(nil)
     @script.instance_variable_get(:@rules).should be([])

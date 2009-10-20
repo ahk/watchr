@@ -36,6 +36,7 @@ module Watchr
     #
     def run
       @handler.listen(monitored_paths)
+    rescue Interrupt
     end
 
     # Callback for file events.
@@ -48,12 +49,14 @@ module Watchr
     # path<Pathname, String>:: path that triggered event
     # event<Symbol>:: event type (ignored for now)
     #
-    def update(path, events = [])
-      if is_current_script?(path)
+    def update(path, event_type = nil)
+      path = Pathname(path).expand_path
+
+      if path == @script.path
         @script.parse!
         @handler.refresh(monitored_paths)
       else
-        @script.action_for(path).call if event_conditions_satisfied?( path, events )
+        @script.action_for(path, event_type).call
       end
     end
 
